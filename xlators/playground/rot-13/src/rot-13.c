@@ -97,49 +97,40 @@ rot13_writev(call_frame_t *frame, xlator_t *this, fd_t *fd,
 int32_t
 init(xlator_t *this)
 {
-    data_t *data = NULL;
+    int ret = -1;
     rot_13_private_t *priv = NULL;
 
     if (!this->children || this->children->next) {
         gf_log("rot13", GF_LOG_ERROR,
                "FATAL: rot13 should have exactly one child");
-        return -1;
+        goto out;
     }
 
     if (!this->parents) {
         gf_log(this->name, GF_LOG_WARNING, "dangling volume. check volfile ");
+        goto out;
     }
 
-    priv = GF_CALLOC(sizeof(rot_13_private_t), 1, 0);
+    priv = GF_CALLOC(1, sizeof(rot_13_private_t), 0);
     if (!priv)
         return -1;
 
     priv->decrypt_read = 1;
     priv->encrypt_write = 1;
 
-    data = dict_get(this->options, "encrypt-write");
-    if (data) {
-        if (gf_string2boolean(data->data, &priv->encrypt_write) == -1) {
-            gf_log(this->name, GF_LOG_ERROR,
-                   "encrypt-write takes only boolean options");
-            GF_FREE(priv);
-            return -1;
-        }
-    }
-
-    data = dict_get(this->options, "decrypt-read");
-    if (data) {
-        if (gf_string2boolean(data->data, &priv->decrypt_read) == -1) {
-            gf_log(this->name, GF_LOG_ERROR,
-                   "decrypt-read takes only boolean options");
-            GF_FREE(priv);
-            return -1;
-        }
-    }
+    GF_OPTION_INIT("encrypt-write", priv->encrypt_write, bool, out);
+    GF_OPTION_INIT("decrypt-read", priv->decrypt_read, bool, out);
 
     this->private = priv;
+    priv = NULL;
+    ret = 0;
     gf_log("rot13", GF_LOG_DEBUG, "rot13 xlator loaded");
-    return 0;
+
+out:
+    if (priv)
+        GF_FREE(priv);
+
+    return ret;
 }
 
 void
@@ -160,7 +151,21 @@ struct xlator_fops fops = {.readv = rot13_readv, .writev = rot13_writev};
 struct xlator_cbks cbks;
 
 struct volume_options options[] = {
-    {.key = {"encrypt-write"}, .type = GF_OPTION_TYPE_BOOL},
-    {.key = {"decrypt-read"}, .type = GF_OPTION_TYPE_BOOL},
+    {.key = {"encrypt-write"},
+     .type = GF_OPTION_TYPE_BOOL,
+     .default_value = "yes"},
+    {.key = {"decrypt-read"},
+     .type = GF_OPTION_TYPE_BOOL,
+     .default_value = "yes"},
     {.key = {NULL}},
+};
+
+xlator_api_t xlator_api = {
+    .init = init,
+    .fini = fini,
+    .op_version = {GD_OP_VERSION_5_0},
+    .fops = &fops,
+    .cbks = &cbks,
+    .options = options,
+    .identifier = "my-rot-13",
 };

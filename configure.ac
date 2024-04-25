@@ -168,6 +168,8 @@ AC_CONFIG_FILES([Makefile
                 xlators/playground/Makefile
                 xlators/playground/template/Makefile
                 xlators/playground/template/src/Makefile
+                xlators/playground/rot-13/Makefile
+                xlators/playground/rot-13/src/Makefile
                 xlators/system/Makefile
                 xlators/system/posix-acl/Makefile
                 xlators/system/posix-acl/src/Makefile
